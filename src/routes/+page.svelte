@@ -35,7 +35,7 @@
           city: 'Peshawar', // You can change this to your city
           country: 'Pakistan',  // And your country
           method: '2'     // ISNA calculation method
-        }).toString()
+        }).toString() // *** CHANGE LOCATION HERE ***
       );
 
       if (response.ok) {
