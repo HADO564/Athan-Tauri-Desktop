@@ -22,6 +22,9 @@
     }
   },
   "bundle": {
+    "resources": [
+      "icons"
+    ],
     "active": true,
     "targets": "all",
     "icon": [

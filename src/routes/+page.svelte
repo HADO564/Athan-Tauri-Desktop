@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { sendNotification } from '@tauri-apps/plugin-notification';
   import { fetch } from '@tauri-apps/plugin-http';
+  import { createTrayIcon } from '../tray/Tray';
+  import {TrayIcon} from "@tauri-apps/api/tray";
+
   interface PrayerTimes {
     Fajr: string;
     Dhuhr: string;
@@ -93,6 +96,7 @@
 }
 
   onMount(async () => {
+    createTrayIcon()
     await requestNotificationPermission();
     await fetchPrayerTimes();
     

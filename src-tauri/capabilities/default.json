@@ -5,14 +5,20 @@
   "windows": [
     "main"
   ],
+  "platforms": ["windows","linux"],
   "permissions": [
     "core:default",
+    "core:window:allow-destroy",
+    "core:window:allow-hide",
+    "core:window:allow-show",
     "opener:default",
     "notification:default",
     "http:default",
     {
       "identifier": "notification:default",
-      "allow": ["**"]
+      "allow": [
+        "**"
+      ]
     },
     {
       "identifier": "http:default",
@@ -21,6 +27,10 @@
           "url": "http://api.aladhan.com/*"
         }
       ]
-    }
+    },
+    "fs:default",
+    "shell:default",
+    "shell:allow-open"
+
   ]
 }
