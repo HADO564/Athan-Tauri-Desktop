@@ -10,6 +10,7 @@ const config = {
   kit: {
     adapter: adapter(),
   },
+  preprocess: vitePreprocess(),
 };
 
 export default config;

@@ -1,168 +1,39 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { sendNotification } from '@tauri-apps/plugin-notification';
-  import { fetch } from '@tauri-apps/plugin-http';
-  import { createTrayIcon } from '../tray/Tray';
-  import { TrayIcon } from "@tauri-apps/api/tray";
-  import { invoke } from '@tauri-apps/api/core';
-
-  interface PrayerTimes {
-    Fajr: string;
-    Dhuhr: string;
-    Asr: string;
-    Maghrib: string;
-    Isha: string;
-  }
-
-  let prayerTimes: PrayerTimes | null = null;
-  let nextPrayer: string = '';
-  let timeUntilNextPrayer: string = '';
-  let updateInterval: ReturnType<typeof setInterval>;
-  let latitude: number | null = null;
-  let longitude: number | null = null;
-
-  async function requestNotificationPermission() {
-    try {
-      await Notification.requestPermission();
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
-    }
-  }
-
-  async function location() {
-    try {
-      const loc = await invoke<{ latitude: number; longitude: number }>('get_device_location');
-      latitude = loc.latitude;
-      longitude = loc.longitude;
-      console.log('Location:', loc);
-    } catch (error) {
-      console.error('Error getting location:', error);
-    }
-  }
-
-  async function requestPermissionAndLocation() {
-    try {
-      const permission = await invoke('request_location_permission');
-      console.log('Permission status:', permission);
-      if (permission === 'Allowed') {
-        await location(); // Call location only if permission is granted
-      } else {
-        console.error('Location permission not granted.');
-      }
-    } catch (error) {
-      console.error('Error requesting location permission:', error);
-    }
-  }
-
-  async function fetchPrayerTimes() {
-    if (latitude === null || longitude === null) {
-      console.error('Latitude and longitude are not available.');
-      return;
-    }
-
-    try {
-      // Using Tauri's fetch API
-      const response = await fetch(
-        'http://api.aladhan.com/v1/timings?' +
-          new URLSearchParams({
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-            method: '2', // ISNA calculation method
-          }).toString()
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        prayerTimes = data.data.timings;
-        updateNextPrayer();
-      } else {
-        console.error('Failed to fetch prayer times:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching prayer times:', error);
-    }
-  }
-
-  function updateNextPrayer() {
-    if (!prayerTimes) return;
-
-    const now = new Date();
-    const prayers = [
-      { name: 'Fajr', time: prayerTimes.Fajr },
-      { name: 'Dhuhr', time: prayerTimes.Dhuhr },
-      { name: 'Asr', time: prayerTimes.Asr },
-      { name: 'Maghrib', time: prayerTimes.Maghrib },
-      { name: 'Isha', time: prayerTimes.Isha },
-    ];
-
-    // Convert prayer times to Date objects
-    const prayerDates = prayers.map((prayer) => {
-      const [hours, minutes] = prayer.time.split(':');
-      const prayerDate = new Date();
-      prayerDate.setHours(parseInt(hours), parseInt(minutes), 0);
-      return { name: prayer.name, date: prayerDate };
-    });
-
-    // Find the next prayer
-    let nextPrayerTime = prayerDates.find((prayer) => prayer.date > now);
-
-    if (!nextPrayerTime) {
-      // If no prayer is found, it means we're past Isha, so the next prayer is Fajr tomorrow
-      const [hours, minutes] = prayerTimes.Fajr.split(':');
-      const nextFajr = new Date();
-      nextFajr.setDate(nextFajr.getDate() + 1); // Move to the next day
-      nextFajr.setHours(parseInt(hours), parseInt(minutes), 0);
-      nextPrayerTime = { name: 'Fajr', date: nextFajr };
-    }
-
-    nextPrayer = nextPrayerTime.name;
-    const timeUntil = nextPrayerTime.date.getTime() - now.getTime();
-    const minutes = Math.floor(timeUntil / 1000 / 60);
-
-    timeUntilNextPrayer = `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-
-    // Send notification when prayer time is due
-    if (minutes <= 1) {
-      sendNotification({
-        title: 'Prayer Time',
-        body: `It's time for ${nextPrayerTime.name} prayer`,
-      });
-    }
-  }
+  import { onMount } from "svelte";
+  import { createTrayIcon } from "../tray/Tray";
+  import { requestPermissionAndLocation } from "../hooks/FetchLocation";
+  import {
+    fetchPrayerTimes,
+    prayerTimes,
+    nextPrayer,
+    timeUntilNextPrayer,
+  } from "../hooks/FetchPrayerTimes";
+  import { requestNotificationPermission } from "../hooks/RequestPermission";
 
   onMount(async () => {
-    createTrayIcon();
-    await requestPermissionAndLocation();
-    await requestNotificationPermission();
-    if (latitude !== null && longitude !== null) {
-      await fetchPrayerTimes();
-    }
-
-    // Update times every minute
-    updateInterval = setInterval(() => {
-      updateNextPrayer();
-    }, 60000);
-  });
-
-  onDestroy(() => {
-    if (updateInterval) {
-      clearInterval(updateInterval);
-    }
-  });
+  createTrayIcon();
+  await requestNotificationPermission();
+  const loc = await requestPermissionAndLocation();
+  
+  if (loc && loc.latitude !== null && loc.longitude !== null) {
+    await fetchPrayerTimes(loc.longitude, loc.latitude);
+  } else {
+    console.error("Failed to fetch prayer times due to missing location data.");
+  }
+});
 </script>
 
-
 <main class="container">
-  <h1>Prayer Times</h1>
-  
+  <h1 class="text-3xl bg-blue-200 p-2 rounded-md font-bold">Prayer Times</h1>
+
   {#if prayerTimes}
-    <div class="prayer-info">
+    <div class="text-center container">
       <div class="next-prayer">
         <h2>Next Prayer</h2>
         <p class="prayer-name">{nextPrayer}</p>
         <p class="time-until">Time until: {timeUntilNextPrayer}</p>
       </div>
-      
+
       <div class="prayer-times">
         <div class="prayer-time">
           <span>Fajr</span>
@@ -191,24 +62,21 @@
   {/if}
 </main>
 
-<style>
+<style lang="postcss">
   .container {
     padding: 2rem;
     max-width: 800px;
     margin: 0 auto;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 
   h1 {
     color: #1a1a1a;
     text-align: center;
     margin-bottom: 2rem;
-  }
-
-  .prayer-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
   }
 
   .next-prayer {

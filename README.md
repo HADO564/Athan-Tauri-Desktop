@@ -1,16 +1,8 @@
-# Tauri + SvelteKit + TypeScript
+# A simple tauri app for athan alerts for windows systems
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+Uses tauri + svelte.
 
-## Recommended IDE Setup
+## How to get started
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
-
-##
-
-To change location, search
-
-````javascript
-// *** 
-```
+Just follow the tauri-v2 quick start tutorial, then npm i in this repo.
 
